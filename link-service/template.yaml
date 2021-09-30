@@ -7,6 +7,9 @@ Description: >
 Globals:
   Function:
     Timeout: 3
+    Environment:
+      Variables:
+        TABLE_NAME: !Select [1, !Split ['/', !GetAtt LinkTable.Arn]]
 
 Resources:
   LinkApi:
@@ -21,8 +24,10 @@ Resources:
       CodeUri: link_api/
       Handler: link_service.entrypoints.aws.lambda_handler
       Runtime: python3.9
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LinkTable
       Events:
-
         LinkList:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
@@ -53,6 +58,15 @@ Resources:
             RestApiId: !Ref LinkApi
             Path: /links/{id}
             Method: delete
+  LinkTable:
+    Type: 'AWS::Serverless::SimpleTable'
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
 
 Outputs:
 
@@ -62,3 +76,6 @@ Outputs:
   LinkServiceFunctionIamRole:
     Description: "Implicit IAM Role created for Link Service function"
     Value: !GetAtt LinkServiceFunctionRole.Arn
+  LinkTableArn:
+    Description: "DynamoDB Arn"
+    Value: !GetAtt LinkTable.Arn
