@@ -17,11 +17,11 @@ class AbstractLinkRepository(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def create(self, title=None, url=None):
+    def create(self, title=None, href=None):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def update(self, link_id, title=None, url=None):
+    def update(self, link_id, title=None, href=None):
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -33,25 +33,25 @@ class MemLinkRepository(AbstractLinkRepository):
     def __init__(self, links):
         self.links = links
 
-    def create(self, title=None, url=None):
+    def create(self, title=None, href=None):
         if title is None:
             raise ValueError
 
         link = {
             "id": str(uuid.uuid4()),
             "title": title,
-            "url": url,
+            "href": href,
         }
         self.links.append(link)
         return link
 
-    def update(self, link_id, title=None, url=None):
+    def update(self, link_id, title=None, href=None):
         link = self.get(link_id)
         if link is None:
             return None
 
         link["title"] = title
-        link["url"] = url
+        link["href"] = href
         self.links = [
             link if str(item["id"]) == str(link_id) else item for item in self.links
         ]
@@ -102,14 +102,14 @@ class DynamoDBLinkRepository(AbstractLinkRepository):
         resp = self.table.scan()
         return resp.get("Items", [])
 
-    def create(self, title=None, url=None):
+    def create(self, title=None, href=None):
         try:
             link_id = str(uuid.uuid4())
             self.table.put_item(
                 Item={
                     "id": link_id,
                     "title": title,
-                    "url": url,
+                    "href": href,
                 }
             )
         except Exception as e:
@@ -118,16 +118,16 @@ class DynamoDBLinkRepository(AbstractLinkRepository):
 
         return self.get(link_id)
 
-    def update(self, link_id, title=None, url=None):
+    def update(self, link_id, title=None, href=None):
         try:
             self.table.update_item(
                 Key={
                     "id": link_id,
                 },
-                UpdateExpression="set title=:t, url=:u",
+                UpdateExpression="set title=:t, href=:h",
                 ExpressionAttributeValues={
                     ":t": title,
-                    ":u": url,
+                    ":h": href,
                 },
                 ReturnValues="UPDATED_NEW",
             )

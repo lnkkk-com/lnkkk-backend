@@ -42,7 +42,7 @@ def link_create(
     link_repository: AbstractLinkRepository = Provide[Container.link_repository],
 ):
     payload = json.loads(event["body"])
-    link = link_repository.create(title=payload.get("title"), url=payload.get("url"))
+    link = link_repository.create(title=payload.get("title"), href=payload.get("href"))
     if not link:
         return {"statusCode": 400, "body": json.dumps({"message": "failed"})}
 
@@ -101,7 +101,7 @@ def link_update(
     link_id = event["pathParameters"]["id"]
     payload = json.loads(event["body"])
     link = link_repository.update(
-        link_id, title=payload.get("title"), url=payload.get("url")
+        link_id, title=payload.get("title"), href=payload.get("href")
     )
     if not link:
         return {"statusCode": 404, "body": json.dumps({"message": "not found"})}
