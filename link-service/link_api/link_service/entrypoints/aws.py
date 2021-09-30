@@ -5,16 +5,17 @@ import sys
 from dependency_injector import containers, providers
 from dependency_injector.wiring import inject, Provide
 
-from link_service.repository import AbstractLinkRepository, MemLinkRepository
 from link_service.data import LINK_DATA
+from link_service.repository import AbstractLinkRepository, DynamoDBLinkRepository
 
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
 
     link_repository = providers.Factory(
-        MemLinkRepository,
-        links=LINK_DATA,
+        DynamoDBLinkRepository,
+        table_name=config.table_name,
+        is_local=config.is_local,
     )
 
 
@@ -124,7 +125,6 @@ def lambda_handler(event, context):
     is_local = os.environ.get("AWS_SAM_LOCAL") == "true"
     container.config.from_dict(
         {
-            "initial_links": LINK_DATA,
             "is_local": is_local,
             "table_name": os.environ.get("TABLE_NAME") if not is_local else "TodoTable",
         }

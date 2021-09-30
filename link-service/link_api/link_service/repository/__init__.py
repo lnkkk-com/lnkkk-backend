@@ -1,5 +1,6 @@
 import abc
 import uuid
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -74,35 +75,41 @@ class MemLinkRepository(AbstractLinkRepository):
         return self.links
 
 
-class DynamoDBRepository(AbstractLinkRepository):
+class DynamoDBLinkRepository(AbstractLinkRepository):
     def __init__(self, table_name, is_local=False):
         if is_local:
-            dynamodb = boto3.resource('dynamodb', endpoint_url="http://dynamodb:8000")
+            dynamodb = boto3.resource("dynamodb", endpoint_url="http://dynamodb:8000")
         else:
-            dynamodb = boto3.resource('dynamodb')
+            dynamodb = boto3.resource("dynamodb")
 
-        self.table = dynamodb.Table(table_name, )
+        self.table = dynamodb.Table(
+            table_name,
+        )
 
     def get(self, link_id: str):
         try:
-            resp = self.table.get_item(Key={'id': link_id, })
+            resp = self.table.get_item(
+                Key={
+                    "id": link_id,
+                }
+            )
         except ClientError as e:
-            print(e.response['Error']['Message'])
+            print(e.response["Error"]["Message"])
         else:
-            return resp.get('Item')
+            return resp.get("Item")
 
     def get_list(self):
         resp = self.table.scan()
-        return resp.get('Items', [])
+        return resp.get("Items", [])
 
     def create(self, title=None, url=None):
         try:
             link_id = str(uuid.uuid4())
             self.table.put_item(
                 Item={
-                    'id': link_id,
-                    'title': title,
-                    'url': url,
+                    "id": link_id,
+                    "title": title,
+                    "url": url,
                 }
             )
         except Exception as e:
@@ -115,14 +122,14 @@ class DynamoDBRepository(AbstractLinkRepository):
         try:
             self.table.update_item(
                 Key={
-                    'id': link_id,
+                    "id": link_id,
                 },
-                UpdateExpression='set title=:t, url=:u',
+                UpdateExpression="set title=:t, url=:u",
                 ExpressionAttributeValues={
-                    ':t': title,
-                    ':u': url,
+                    ":t": title,
+                    ":u": url,
                 },
-                ReturnValues='UPDATED_NEW',
+                ReturnValues="UPDATED_NEW",
             )
         except Exception as e:
             print(type(e), str(e))
@@ -134,7 +141,7 @@ class DynamoDBRepository(AbstractLinkRepository):
         try:
             resp = self.table.delete_item(
                 Key={
-                    'id': link_id,
+                    "id": link_id,
                 },
             )
         except ClientError as e:
