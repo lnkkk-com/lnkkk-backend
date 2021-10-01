@@ -5,7 +5,7 @@ import sys
 from dependency_injector import containers, providers
 from dependency_injector.wiring import inject, Provide
 
-from link_service.data import LINK_DATA
+from link_service.domain.schema import LinkSchema
 from link_service.repository import AbstractLinkRepository, DynamoDBLinkRepository
 
 
@@ -25,11 +25,13 @@ def link_list(
     context,
     link_repository: AbstractLinkRepository = Provide[Container.link_repository],
 ):
+    links = link_repository.get_list()
+    schema = LinkSchema(many=True)
     return {
         "statusCode": 200,
         "body": json.dumps(
             {
-                "data": link_repository.get_list(),
+                "data": schema.dump(links),
             }
         ),
     }
@@ -43,6 +45,7 @@ def link_create(
 ):
     payload = json.loads(event["body"])
     link = link_repository.create(title=payload.get("title"), href=payload.get("href"))
+    schema = LinkSchema()
     if not link:
         return {"statusCode": 400, "body": json.dumps({"message": "failed"})}
 
@@ -50,7 +53,7 @@ def link_create(
         "statusCode": 200,
         "body": json.dumps(
             {
-                "data": link,
+                "data": schema.dump(link),
             }
         ),
     }
@@ -79,6 +82,7 @@ def link_detail(
 ):
     link_id = event["pathParameters"]["id"]
     link = link_repository.get(link_id)
+    schema = LinkSchema()
     if not link:
         return {"statusCode": 404, "body": json.dumps({"message": "not found"})}
 
@@ -86,7 +90,7 @@ def link_detail(
         "statusCode": 200,
         "body": json.dumps(
             {
-                "data": link,
+                "data": schema.dump(link),
             }
         ),
     }
@@ -103,6 +107,7 @@ def link_update(
     link = link_repository.update(
         link_id, title=payload.get("title"), href=payload.get("href")
     )
+    schema = LinkSchema()
     if not link:
         return {"statusCode": 404, "body": json.dumps({"message": "not found"})}
 
@@ -110,7 +115,7 @@ def link_update(
         "statusCode": 200,
         "body": json.dumps(
             {
-                "data": link,
+                "data": schema.dump(link),
             }
         ),
     }

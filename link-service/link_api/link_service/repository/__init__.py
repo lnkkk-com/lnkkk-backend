@@ -1,27 +1,30 @@
 import abc
 import uuid
+from typing import List
 
 import boto3
 from botocore.exceptions import ClientError
 
+from link_service.domain.model import Link
+
 
 class AbstractLinkRepository(abc.ABC):
     @abc.abstractmethod
-    def get(self, link_id: str):
+    def get(self, link_id: str) -> Link:
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_list(
         self,
-    ):
+    ) -> List[Link]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def create(self, title=None, href=None):
+    def create(self, title=None, href=None) -> Link:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def update(self, link_id, title=None, href=None):
+    def update(self, link_id, title=None, href=None) -> Link:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -43,7 +46,7 @@ class MemLinkRepository(AbstractLinkRepository):
             "href": href,
         }
         self.links.append(link)
-        return link
+        return Link.from_dict(link)
 
     def update(self, link_id, title=None, href=None):
         link = self.get(link_id)
@@ -56,7 +59,7 @@ class MemLinkRepository(AbstractLinkRepository):
             link if str(item["id"]) == str(link_id) else item for item in self.links
         ]
 
-        return link
+        return Link.from_dict(link)
 
     def delete(self, link_id):
         self.links = list(
@@ -65,20 +68,26 @@ class MemLinkRepository(AbstractLinkRepository):
 
     def get(self, link_id):
         try:
-            return next(link for link in self.links if str(link["id"]) == str(link_id))
+            return next(
+                Link.from_dict(link)
+                for link in self.links
+                if str(link["id"]) == str(link_id)
+            )
         except StopIteration:
             return None
 
     def get_list(
         self,
     ):
-        return self.links
+        return [Link.from_dict(link) for link in self.links]
 
 
 class DynamoDBLinkRepository(AbstractLinkRepository):
     def __init__(self, table_name, is_local=False):
         if is_local:
-            dynamodb = boto3.resource("dynamodb", endpoint_url="http://dynamodb:8000")
+            dynamodb = boto3.resource(
+                "dynamodb", endpoint_url="http://host.docker.internal:8000"
+            )
         else:
             dynamodb = boto3.resource("dynamodb")
 
@@ -96,11 +105,11 @@ class DynamoDBLinkRepository(AbstractLinkRepository):
         except ClientError as e:
             print(e.response["Error"]["Message"])
         else:
-            return resp.get("Item")
+            return Link.from_dict(resp.get("Item"))
 
     def get_list(self):
         resp = self.table.scan()
-        return resp.get("Items", [])
+        return [Link.from_dict(link) for link in resp.get("Items", [])]
 
     def create(self, title=None, href=None):
         try:
